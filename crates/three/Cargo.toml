@@ -1,0 +1,20 @@
+[package]
+name = "photocraft-three"
+description = "3D scenes for PhotoCraft's 3D layers: meshes, extrusion, materials, lights, a rasterizer, a ray tracer and OBJ/STL/glTF files"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "photocraft_three"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+rayon = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

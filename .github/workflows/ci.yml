@@ -199,12 +199,17 @@ jobs:
       # warm, each Windows leg built 4.5 min faster. Like rust-cache, only main writes (PRs read
       # main's entries); a full set is ~90 MB, so it barely touches the 10 GB budget (#2688).
       # Test executables can't be cached, so a PR still links its tests.
+      # Off for now, as upstream did: released sccache expands Cargo's response files and exceeds
+      # Windows' rustc command-line limit (os error 206 on photocraft-ui-egui). Re-enable once a
+      # release includes mozilla/sccache#3026.
       - name: Install sccache
+        if: false
         uses: Mozilla-Actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         with:
           version: v0.18.0
 
       - name: Use sccache
+        if: false
         env:
           MAIN: ${{ github.ref == 'refs/heads/main' }}
         run: |

@@ -6,6 +6,7 @@ use serde_json::Value;
 use crate::PhotocraftApp;
 
 /// 3DPhotoCraft's own releases (the same as `apps/photocraft/src/updates.rs`): never PhotoCraft's.
+#[cfg(not(target_arch = "wasm32"))]
 const UPDATE_APP: craft_update::App = craft_update::App {
     former_ids: &["photocraft"],
     ..craft_update::App::new("3dphotocraft", "3DPhotoCraft", "Photo editing with a 3D workspace", "VibeCodedSoftware/3DPhotoCraft")

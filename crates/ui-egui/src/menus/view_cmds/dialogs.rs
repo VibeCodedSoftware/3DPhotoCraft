@@ -339,7 +339,9 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
             let st = app.session.active()?;
             let (doc, layer) = (st.doc.id, st.active_layer?);
             let name = st.doc.layer(layer).map_or_else(|| "model".to_string(), |l| l.name.clone());
-            Some(app.pick_save(&format!("{name}.glb"), move |app, path| app.with_document(doc, |app| app.run("3d.exportLayer", json!({"layer": layer.0, "path": path})))))
+            Some(app.pick_save(&format!("{name}.glb"), move |app, path| {
+                app.with_document(doc, |app| app.run("3d.exportLayer", json!({"layer": layer.0, "path": path})))
+            }))
         }
         "layer.smartObjects.relinkToFile" => {
             let st = app.session.active()?;

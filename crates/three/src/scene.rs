@@ -159,9 +159,8 @@ impl Material {
 }
 
 /// Named material presets (Photoshop's Material Picker library).
-pub const MATERIAL_PRESETS: &[&str] = &[
-    "default", "plastic", "glossyPlastic", "matte", "metalGold", "metalChrome", "metalCopper", "glass", "rubber", "wood", "stone", "neon",
-];
+pub const MATERIAL_PRESETS: &[&str] =
+    &["default", "plastic", "glossyPlastic", "matte", "metalGold", "metalChrome", "metalCopper", "glass", "rubber", "wood", "stone", "neon"];
 
 pub fn material_preset(id: &str) -> Option<Material> {
     let m = |d: Rgb, s: Rgb, shine: f32, refl: f32| Material { name: id.into(), diffuse: d, specular: s, shine, reflection: refl, ..Default::default() };
@@ -173,7 +172,16 @@ pub fn material_preset(id: &str) -> Option<Material> {
         "metalGold" => m([0.83, 0.62, 0.22], [1.0, 0.85, 0.5], 0.8, 0.55),
         "metalChrome" => m([0.55, 0.56, 0.58], [1.0, 1.0, 1.0], 0.95, 0.85),
         "metalCopper" => m([0.72, 0.4, 0.24], [0.95, 0.65, 0.5], 0.75, 0.45),
-        "glass" => Material { name: id.into(), diffuse: [0.9, 0.95, 1.0], specular: [1.0, 1.0, 1.0], shine: 0.95, reflection: 0.15, opacity: 0.2, refraction: 1.5, ..Default::default() },
+        "glass" => Material {
+            name: id.into(),
+            diffuse: [0.9, 0.95, 1.0],
+            specular: [1.0, 1.0, 1.0],
+            shine: 0.95,
+            reflection: 0.15,
+            opacity: 0.2,
+            refraction: 1.5,
+            ..Default::default()
+        },
         "rubber" => m([0.08, 0.08, 0.08], [0.1, 0.1, 0.1], 0.15, 0.0),
         "wood" => m([0.55, 0.36, 0.2], [0.15, 0.12, 0.1], 0.25, 0.0),
         "stone" => m([0.5, 0.48, 0.45], [0.05, 0.05, 0.05], 0.1, 0.0),
@@ -484,7 +492,18 @@ pub const DEFAULT_FOV: f32 = 30.0;
 impl Default for Camera {
     fn default() -> Self {
         let d = 1.0 / (DEFAULT_FOV.to_radians() * 0.5).tan();
-        Camera { target: Vec3::ZERO, distance: d, yaw: 0.0, pitch: 0.0, roll: 0.0, fov: DEFAULT_FOV, orthographic: false, ortho_height: 2.0, dof_blur: 0.0, dof_distance: d }
+        Camera {
+            target: Vec3::ZERO,
+            distance: d,
+            yaw: 0.0,
+            pitch: 0.0,
+            roll: 0.0,
+            fov: DEFAULT_FOV,
+            orthographic: false,
+            ortho_height: 2.0,
+            dof_blur: 0.0,
+            dof_distance: d,
+        }
     }
 }
 
@@ -606,7 +625,8 @@ pub enum Style {
 }
 
 impl Style {
-    pub const ALL: [Style; 8] = [Style::Solid, Style::Unlit, Style::Wireframe, Style::ShadedWireframe, Style::Points, Style::Normals, Style::DepthMap, Style::LineIllustration];
+    pub const ALL: [Style; 8] =
+        [Style::Solid, Style::Unlit, Style::Wireframe, Style::ShadedWireframe, Style::Points, Style::Normals, Style::DepthMap, Style::LineIllustration];
     pub fn id(self) -> &'static str {
         match self {
             Style::Solid => "solid",
@@ -878,30 +898,73 @@ pub const LIGHT_PRESETS: &[&str] = &["default", "studio", "softbox", "dramatic",
 
 /// Replace the scene's lights with a preset (keeps the environment's colours in step).
 pub fn apply_light_preset(scene: &mut Scene, id: &str) -> bool {
-    let inf = |name: &str, yaw: f32, pitch: f32, c: Rgb, i: f32, shadow: bool, soft: f32| Light { name: name.into(), kind: LightKind::Infinite, yaw, pitch, color: c, intensity: i, shadow, softness: soft, ..Default::default() };
+    let inf = |name: &str, yaw: f32, pitch: f32, c: Rgb, i: f32, shadow: bool, soft: f32| Light {
+        name: name.into(),
+        kind: LightKind::Infinite,
+        yaw,
+        pitch,
+        color: c,
+        intensity: i,
+        shadow,
+        softness: soft,
+        ..Default::default()
+    };
     let spot = |name: &str, pos: Vec3, c: Rgb, i: f32, cone: f32| {
-        let mut l = Light { name: name.into(), kind: LightKind::Spot, position: pos, color: c, intensity: i, hotspot: cone * 0.6, cone, shadow: true, softness: 0.3, ..Default::default() };
+        let mut l = Light {
+            name: name.into(),
+            kind: LightKind::Spot,
+            position: pos,
+            color: c,
+            intensity: i,
+            hotspot: cone * 0.6,
+            cone,
+            shadow: true,
+            softness: 0.3,
+            ..Default::default()
+        };
         l.aim_at(Vec3::ZERO);
         l
     };
     let (lights, ambient, sky, ground): (Vec<Light>, Rgb, Rgb, Rgb) = match id {
         "default" => (vec![inf("Infinite Light 1", -30.0, -45.0, [1.0, 1.0, 1.0], 1.0, true, 0.2)], [0.08, 0.08, 0.09], [0.62, 0.68, 0.76], [0.3, 0.28, 0.26]),
         "studio" => (
-            vec![inf("Key Light", -40.0, -35.0, [1.0, 0.98, 0.95], 1.0, true, 0.3), inf("Fill Light", 50.0, -15.0, [0.85, 0.9, 1.0], 0.4, false, 0.0), inf("Top Light", 0.0, -85.0, [1.0, 1.0, 1.0], 0.3, false, 0.0)],
+            vec![
+                inf("Key Light", -40.0, -35.0, [1.0, 0.98, 0.95], 1.0, true, 0.3),
+                inf("Fill Light", 50.0, -15.0, [0.85, 0.9, 1.0], 0.4, false, 0.0),
+                inf("Top Light", 0.0, -85.0, [1.0, 1.0, 1.0], 0.3, false, 0.0),
+            ],
             [0.1, 0.1, 0.1],
             [0.7, 0.7, 0.72],
             [0.4, 0.4, 0.4],
         ),
-        "softbox" => (vec![inf("Softbox", -20.0, -50.0, [1.0, 1.0, 1.0], 1.1, true, 0.9), inf("Bounce", 160.0, -10.0, [1.0, 1.0, 1.0], 0.25, false, 0.0)], [0.15, 0.15, 0.15], [0.8, 0.8, 0.8], [0.5, 0.5, 0.5]),
-        "dramatic" => (vec![spot("Spot Light", v3(-3.0, 4.0, 2.5), [1.0, 0.95, 0.85], 2.2, 35.0), inf("Rim Light", 160.0, -20.0, [0.6, 0.7, 1.0], 0.5, false, 0.0)], [0.02, 0.02, 0.03], [0.1, 0.1, 0.12], [0.03, 0.03, 0.03]),
+        "softbox" => (
+            vec![inf("Softbox", -20.0, -50.0, [1.0, 1.0, 1.0], 1.1, true, 0.9), inf("Bounce", 160.0, -10.0, [1.0, 1.0, 1.0], 0.25, false, 0.0)],
+            [0.15, 0.15, 0.15],
+            [0.8, 0.8, 0.8],
+            [0.5, 0.5, 0.5],
+        ),
+        "dramatic" => (
+            vec![spot("Spot Light", v3(-3.0, 4.0, 2.5), [1.0, 0.95, 0.85], 2.2, 35.0), inf("Rim Light", 160.0, -20.0, [0.6, 0.7, 1.0], 0.5, false, 0.0)],
+            [0.02, 0.02, 0.03],
+            [0.1, 0.1, 0.12],
+            [0.03, 0.03, 0.03],
+        ),
         "productPhotography" => (
-            vec![inf("Key Light", -35.0, -40.0, [1.0, 1.0, 1.0], 0.9, true, 0.7), inf("Fill Light", 45.0, -25.0, [1.0, 1.0, 1.0], 0.45, false, 0.0), inf("Back Light", 180.0, -30.0, [1.0, 1.0, 1.0], 0.6, false, 0.0)],
+            vec![
+                inf("Key Light", -35.0, -40.0, [1.0, 1.0, 1.0], 0.9, true, 0.7),
+                inf("Fill Light", 45.0, -25.0, [1.0, 1.0, 1.0], 0.45, false, 0.0),
+                inf("Back Light", 180.0, -30.0, [1.0, 1.0, 1.0], 0.6, false, 0.0),
+            ],
             [0.18, 0.18, 0.18],
             [0.95, 0.95, 0.95],
             [0.85, 0.85, 0.85],
         ),
         "threePoint" => (
-            vec![inf("Key Light", -45.0, -35.0, [1.0, 0.97, 0.92], 1.0, true, 0.25), inf("Fill Light", 45.0, -20.0, [0.8, 0.85, 1.0], 0.45, false, 0.0), inf("Rim Light", 170.0, -35.0, [1.0, 1.0, 1.0], 0.8, false, 0.0)],
+            vec![
+                inf("Key Light", -45.0, -35.0, [1.0, 0.97, 0.92], 1.0, true, 0.25),
+                inf("Fill Light", 45.0, -20.0, [0.8, 0.85, 1.0], 0.45, false, 0.0),
+                inf("Rim Light", 170.0, -35.0, [1.0, 1.0, 1.0], 0.8, false, 0.0),
+            ],
             [0.06, 0.06, 0.07],
             [0.5, 0.55, 0.6],
             [0.25, 0.24, 0.22],
@@ -931,8 +994,7 @@ mod tests {
     fn scene_round_trips_through_json() {
         let mut s = Scene::default();
         let tex = s.add_texture("t", Image::solid([255, 0, 0, 255]));
-        let mut m = Material::default();
-        m.diffuse_texture = Some(tex);
+        let m = Material { diffuse_texture: Some(tex), ..Default::default() };
         s.add_object("Cube", Geometry::Preset { preset: MeshPreset::Cube, aspect: 1.0 }, vec![m]);
         let json = serde_json::to_string(&s).unwrap();
         let mut back: Scene = serde_json::from_str(&json).unwrap();

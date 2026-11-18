@@ -56,7 +56,13 @@ impl Bvh {
                 continue;
             }
             let size = cb.size();
-            let axis = if size.x >= size.y && size.x >= size.z { 0 } else if size.y >= size.z { 1 } else { 2 };
+            let axis = if size.x >= size.y && size.x >= size.z {
+                0
+            } else if size.y >= size.z {
+                1
+            } else {
+                2
+            };
             let slice = &mut order[start..start + count];
             slice.sort_unstable_by(|a, c| cent[*a as usize].get(axis).total_cmp(&cent[*c as usize].get(axis)));
             let mid = count / 2;
@@ -365,7 +371,7 @@ pub fn render_traced(scene: &Scene, width: u32, height: u32, cancel: &(dyn Fn() 
                     let right = fwd.cross(up).normalize();
                     let a = rnd(id, sidx, 3) * std::f32::consts::TAU;
                     let r = rnd(id, sidx, 4).sqrt() * cam.dof_blur * 0.08 * cam.distance;
-                    o = o + (right * a.cos() + up * a.sin()) * r;
+                    o += (right * a.cos() + up * a.sin()) * r;
                     d = (focus - o).normalize();
                 }
                 let cx = Ctx { px: id, sample: sidx };

@@ -18,7 +18,8 @@ use crate::mesh::Mesh;
 pub type Contour = Vec<[f32; 2]>;
 
 /// Material slots of an extrusion, in Photoshop's order.
-pub const EXTRUSION_SLOTS: [&str; 5] = ["Front Inflation Material", "Front Bevel Material", "Extrusion Material", "Back Bevel Material", "Back Inflation Material"];
+pub const EXTRUSION_SLOTS: [&str; 5] =
+    ["Front Inflation Material", "Front Bevel Material", "Extrusion Material", "Back Bevel Material", "Back Inflation Material"];
 pub const SLOT_FRONT: u16 = 0;
 pub const SLOT_FRONT_BEVEL: u16 = 1;
 pub const SLOT_SIDES: u16 = 2;
@@ -152,9 +153,7 @@ pub fn trace(coverage: &[f32], w: usize, h: usize) -> Vec<Contour> {
     if w == 0 || h == 0 || coverage.len() < w * h {
         return Vec::new();
     }
-    let at = |x: i64, y: i64| -> f32 {
-        if x < 0 || y < 0 || x >= w as i64 || y >= h as i64 { 0.0 } else { coverage[y as usize * w + x as usize] }
-    };
+    let at = |x: i64, y: i64| -> f32 { if x < 0 || y < 0 || x >= w as i64 || y >= h as i64 { 0.0 } else { coverage[y as usize * w + x as usize] } };
     // Sample points are pixel centres; cells span between them, with a one-pixel empty border.
     // Edge ids: horizontal edge (x,y)-(x+1,y) = (x,y,0); vertical (x,y)-(x,y+1) = (x,y,1).
     type Edge = (i64, i64, u8);
@@ -297,10 +296,12 @@ fn dp(c: &[[f32; 2]], i: usize, j: usize, eps: f32, keep: &mut [bool]) {
 /// Signed area (positive = counter-clockwise in a y-up frame).
 pub fn signed_area(c: &[[f32; 2]]) -> f32 {
     let n = c.len();
-    (0..n).map(|i| {
-        let (a, b) = (c[i], c[(i + 1) % n]);
-        a[0] * b[1] - b[0] * a[1]
-    }).sum::<f32>()
+    (0..n)
+        .map(|i| {
+            let (a, b) = (c[i], c[(i + 1) % n]);
+            a[0] * b[1] - b[0] * a[1]
+        })
+        .sum::<f32>()
         * 0.5
 }
 
@@ -329,10 +330,11 @@ pub struct Shape {
 /// enclosing outline. Loops must be in a y-up frame. Tiny loops (area < `min_area`) are dropped.
 pub fn shapes(loops: &[Contour], min_area: f32) -> Vec<Shape> {
     let loops: Vec<&Contour> = loops.iter().filter(|c| c.len() >= 3 && signed_area(c).abs() >= min_area).collect();
-    let depth: Vec<usize> = loops.iter().enumerate().map(|(i, c)| loops.iter().enumerate().filter(|(j, o)| *j != i && point_in_polygon(c[0], o)).count()).collect();
+    let depth: Vec<usize> =
+        loops.iter().enumerate().map(|(i, c)| loops.iter().enumerate().filter(|(j, o)| *j != i && point_in_polygon(c[0], o)).count()).collect();
     let mut out: Vec<(usize, Shape)> = Vec::new();
     for (i, c) in loops.iter().enumerate() {
-        if depth[i] % 2 == 0 {
+        if depth[i].is_multiple_of(2) {
             let mut outer = (*c).clone();
             if signed_area(&outer) < 0.0 {
                 outer.reverse();
@@ -471,9 +473,7 @@ fn ear_clip(pts: &[[f32; 2]], mut ring: Vec<u32>) -> Vec<[u32; 3]> {
             out.push([ia, ib, ic]);
             ring.remove(i % n);
             guard = 0;
-            if i > 0 {
-                i -= 1;
-            }
+            i = i.saturating_sub(1);
         } else {
             i = (i + 1) % n;
             guard += 1;
@@ -579,22 +579,22 @@ pub fn extrude(shapes: &[Shape], params: &ExtrudeParams, uv_of: &dyn Fn([f32; 2]
             let mut prev: Option<(Vec<[f32; 2]>, f32)> = None;
             for &(ins, z, slot) in &rings {
                 let ring = if ins > 0.0 { inset(c, ins) } else { (*c).clone() };
-                if let Some((pr, pz)) = &prev {
-                    if (z - pz).abs() > 1e-7 || ring != *pr {
-                        for i in 0..n {
-                            let j = (i + 1) % n;
-                            let (a0, a1, b0, b1) = (pr[i], pr[j], ring[i], ring[j]);
-                            let u0 = i as f32 / n as f32;
-                            let u1 = (i + 1) as f32 / n as f32;
-                            let va = m.vertex(v3(a0[0], a0[1], *pz), Vec3::ZERO, [u0, 1.0 - (*pz - zb) / p.depth.max(1e-6)]);
-                            let vb = m.vertex(v3(a1[0], a1[1], *pz), Vec3::ZERO, [u1, 1.0 - (*pz - zb) / p.depth.max(1e-6)]);
-                            let vc = m.vertex(v3(b1[0], b1[1], z), Vec3::ZERO, [u1, 1.0 - (z - zb) / p.depth.max(1e-6)]);
-                            let vd = m.vertex(v3(b0[0], b0[1], z), Vec3::ZERO, [u0, 1.0 - (z - zb) / p.depth.max(1e-6)]);
-                            // Solid on the left of the edge a0→a1 seen from +z; the outward side
-                            // is the right, so wind (a0, a1, b1) facing out.
-                            m.tri(va, vb, vc, slot);
-                            m.tri(va, vc, vd, slot);
-                        }
+                if let Some((pr, pz)) = &prev
+                    && ((z - pz).abs() > 1e-7 || ring != *pr)
+                {
+                    for i in 0..n {
+                        let j = (i + 1) % n;
+                        let (a0, a1, b0, b1) = (pr[i], pr[j], ring[i], ring[j]);
+                        let u0 = i as f32 / n as f32;
+                        let u1 = (i + 1) as f32 / n as f32;
+                        let va = m.vertex(v3(a0[0], a0[1], *pz), Vec3::ZERO, [u0, 1.0 - (*pz - zb) / p.depth.max(1e-6)]);
+                        let vb = m.vertex(v3(a1[0], a1[1], *pz), Vec3::ZERO, [u1, 1.0 - (*pz - zb) / p.depth.max(1e-6)]);
+                        let vc = m.vertex(v3(b1[0], b1[1], z), Vec3::ZERO, [u1, 1.0 - (z - zb) / p.depth.max(1e-6)]);
+                        let vd = m.vertex(v3(b0[0], b0[1], z), Vec3::ZERO, [u0, 1.0 - (z - zb) / p.depth.max(1e-6)]);
+                        // Solid on the left of the edge a0→a1 seen from +z; the outward side
+                        // is the right, so wind (a0, a1, b1) facing out.
+                        m.tri(va, vb, vc, slot);
+                        m.tri(va, vc, vd, slot);
                     }
                 }
                 prev = Some((ring, z));

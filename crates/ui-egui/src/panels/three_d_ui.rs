@@ -195,8 +195,17 @@ enum Act {
     /// Run through the menu path (file pickers, dialogs).
     Menu(&'static str),
     Close,
-    LoadTexture { id: u32, slot: usize, map: &'static str },
-    LayerTexture { id: u32, slot: usize, map: &'static str, layer: u64 },
+    LoadTexture {
+        id: u32,
+        slot: usize,
+        map: &'static str,
+    },
+    LayerTexture {
+        id: u32,
+        slot: usize,
+        map: &'static str,
+        layer: u64,
+    },
 }
 
 pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
@@ -206,7 +215,8 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let scene = active_scene(app);
     let have_doc = app.session.active().is_some();
     let doc_size = app.session.active().map(|d| (d.doc.size.width, d.doc.size.height)).unwrap_or((1, 1));
-    let layers: Vec<(u64, String)> = app.session.active().map(|d| d.doc.walk().into_iter().map(|(_, _, l)| (l.id.0, l.name.clone())).collect()).unwrap_or_default();
+    let layers: Vec<(u64, String)> =
+        app.session.active().map(|d| d.doc.walk().into_iter().map(|(_, _, l)| (l.id.0, l.name.clone())).collect()).unwrap_or_default();
     let t = Tokens::get(ctx);
     let mut acts: Vec<Act> = Vec::new();
     let mut ui_state = app.ui.three_d.clone();
@@ -267,13 +277,19 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 });
             });
             let mut on_canvas = !ui_state.canvas_off;
-            if ui.checkbox(&mut on_canvas, tl!("Use 3D tools on the canvas")).on_hover_text(tl!("Drag on the image to navigate; turn off to paint or select on the 3D layer")).changed() {
+            if ui
+                .checkbox(&mut on_canvas, tl!("Use 3D tools on the canvas"))
+                .on_hover_text(tl!("Drag on the image to navigate; turn off to paint or select on the 3D layer"))
+                .changed()
+            {
                 ui_state.canvas_off = !on_canvas;
             }
             // Scene view.
             if let Some(tex) = &ui_state.cache.texture {
                 let size = vec2(view_w as f32, view_h as f32);
-                let r = ui.add(egui::Image::new((tex.id(), size)).sense(egui::Sense::click_and_drag())).on_hover_text(tl!("Drag to navigate; the scroll wheel slides the camera"));
+                let r = ui
+                    .add(egui::Image::new((tex.id(), size)).sense(egui::Sense::click_and_drag()))
+                    .on_hover_text(tl!("Drag to navigate; the scroll wheel slides the camera"));
                 let d = r.drag_delta();
                 let k = doc_size.1 as f32 / view_h as f32;
                 let object = match (ui_state.move_object, ui_state.node) {
@@ -295,7 +311,14 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 }
             }
             ui.horizontal_wrapped(|ui| {
-                for (id, label) in [("3d.view.default", "Reset View"), ("3d.view.fit", "Fit"), ("3d.view.front", "Front"), ("3d.view.top", "Top"), ("3d.view.left", "Left"), ("3d.view.right", "Right")] {
+                for (id, label) in [
+                    ("3d.view.default", "Reset View"),
+                    ("3d.view.fit", "Fit"),
+                    ("3d.view.front", "Front"),
+                    ("3d.view.top", "Top"),
+                    ("3d.view.left", "Left"),
+                    ("3d.view.right", "Right"),
+                ] {
                     if ui.small_button(label).clicked() {
                         acts.push(Act::Run(id, json!({})));
                     }
@@ -349,7 +372,14 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
                     (Some(doc), Some(layer)) => app.pick_file_bytes(move |app, name, bytes| {
                         app.with_document(doc, |app| {
                             let img = decode(&name, &bytes).ok_or_else(|| format!("{name} isn't an image PhotoCraft reads"))?;
-                            let r = photocraft_engine::three_d_cmds::set_texture_image(&mut app.session, layer, &json!({"id": id, "slot": slot}), map, Some((name.clone(), img))).map_err(|e| e.to_string());
+                            let r = photocraft_engine::three_d_cmds::set_texture_image(
+                                &mut app.session,
+                                layer,
+                                &json!({"id": id, "slot": slot}),
+                                map,
+                                Some((name.clone(), img)),
+                            )
+                            .map_err(|e| e.to_string());
                             app.sync_views();
                             r
                         })
@@ -514,7 +544,18 @@ fn tree(ui: &mut egui::Ui, sc: &Scene, st: &mut ThreeDUi, acts: &mut Vec<Act>) {
 }
 
 /// A numeric field that sends `3d.set` with `values` built from the new number.
-fn num(ui: &mut egui::Ui, label: &str, v: f32, range: std::ops::RangeInclusive<f32>, speed: f32, mut make: impl FnMut(f32) -> Value, target: Value, acts: &mut Vec<Act>, key: &str) {
+#[allow(clippy::too_many_arguments)]
+fn num(
+    ui: &mut egui::Ui,
+    label: &str,
+    v: f32,
+    range: std::ops::RangeInclusive<f32>,
+    speed: f32,
+    mut make: impl FnMut(f32) -> Value,
+    target: Value,
+    acts: &mut Vec<Act>,
+    key: &str,
+) {
     ui.horizontal(|ui| {
         ui.label(label);
         let mut x = v;
@@ -527,7 +568,17 @@ fn num(ui: &mut egui::Ui, label: &str, v: f32, range: std::ops::RangeInclusive<f
     });
 }
 
-fn slider(ui: &mut egui::Ui, label: &str, v: f32, range: std::ops::RangeInclusive<f32>, mut make: impl FnMut(f32) -> Value, target: Value, acts: &mut Vec<Act>, key: &str) {
+#[allow(clippy::too_many_arguments)]
+fn slider(
+    ui: &mut egui::Ui,
+    label: &str,
+    v: f32,
+    range: std::ops::RangeInclusive<f32>,
+    mut make: impl FnMut(f32) -> Value,
+    target: Value,
+    acts: &mut Vec<Act>,
+    key: &str,
+) {
     let mut x = v;
     if ui.add(egui::Slider::new(&mut x, range).text(label)).changed() {
         let mut p = target;
@@ -559,6 +610,7 @@ fn check(ui: &mut egui::Ui, label: &str, v: bool, mut make: impl FnMut(bool) -> 
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn vec3(ui: &mut egui::Ui, label: &str, v: Vec3, speed: f32, field: &'static str, sub: &'static str, target: &Value, acts: &mut Vec<Act>, key: &str) {
     ui.horizontal(|ui| {
         ui.label(label);
@@ -778,7 +830,17 @@ fn properties(ui: &mut egui::Ui, sc: &Scene, st: &mut ThreeDUi, acts: &mut Vec<A
                 slider(ui, "Shear Y", params.shear_y, -60.0..=60.0, |v| g(json!({"shearY": v})), tg.clone(), acts, key);
                 num(ui, "Bevel Width", params.bevel_width, 0.0..=5.0, 0.001, |v| g(json!({"bevelWidth": v})), tg.clone(), acts, key);
                 slider(ui, "Bevel Angle", params.bevel_angle, 0.0..=3.0, |v| g(json!({"bevelAngle": v})), tg.clone(), acts, key);
-                num(ui, "Bevel Segments", params.bevel_segments as f32, 1.0..=16.0, 0.05, |v| g(json!({"bevelSegments": v.round() as u32})), tg.clone(), acts, key);
+                num(
+                    ui,
+                    "Bevel Segments",
+                    params.bevel_segments as f32,
+                    1.0..=16.0,
+                    0.05,
+                    |v| g(json!({"bevelSegments": v.round() as u32})),
+                    tg.clone(),
+                    acts,
+                    key,
+                );
                 ui.horizontal_wrapped(|ui| {
                     ui.label(tl!("Contour"));
                     for c in BevelContour::ALL {
@@ -809,7 +871,16 @@ fn properties(ui: &mut egui::Ui, sc: &Scene, st: &mut ThreeDUi, acts: &mut Vec<A
 }
 
 #[allow(clippy::too_many_arguments)]
-fn material_editor(ui: &mut egui::Ui, sc: &Scene, o: &photocraft_three::Object, st: &mut ThreeDUi, acts: &mut Vec<Act>, key: &str, layers: &[(u64, String)], t: &Tokens) {
+fn material_editor(
+    ui: &mut egui::Ui,
+    sc: &Scene,
+    o: &photocraft_three::Object,
+    st: &mut ThreeDUi,
+    acts: &mut Vec<Act>,
+    key: &str,
+    layers: &[(u64, String)],
+    t: &Tokens,
+) {
     ui.separator();
     ui.label(RichText::new(tl!("Materials")).strong().color(t.text));
     if o.materials.is_empty() {

@@ -412,7 +412,9 @@ fn split_extrusion(s: &mut Session, p: &Value) -> Result<Value> {
     let id = layer_3d(s, p)?;
     let obj = p.get("object").and_then(Value::as_u64).map(|v| v as u32);
     edit_scene(s, id, "Split Extrusion", |sc, _| {
-        let target = obj.or_else(|| sc.objects.iter().find(|o| matches!(&o.geometry, Geometry::Extrusion { shapes, .. } if shapes.len() > 1)).map(|o| o.id)).ok_or_else(|| other("no extrusion with more than one outline"))?;
+        let target = obj
+            .or_else(|| sc.objects.iter().find(|o| matches!(&o.geometry, Geometry::Extrusion { shapes, .. } if shapes.len() > 1)).map(|o| o.id))
+            .ok_or_else(|| other("no extrusion with more than one outline"))?;
         let o = sc.object(target).cloned().ok_or_else(|| other("no such object"))?;
         let Geometry::Extrusion { shapes, params, uv_box } = &o.geometry else { return Err(other("the object isn't an extrusion")) };
         if shapes.len() < 2 {
@@ -476,11 +478,7 @@ fn new_mesh_preset(s: &mut Session, p: &Value, preset: MeshPreset) -> Result<Val
     let name = id.and_then(|i| doc.layer(i)).map_or_else(|| preset.label().to_string(), |l| l.name.clone());
     let mut sc = Scene::default();
     let tex_id = tex.as_ref().map(|(_, img)| sc.add_texture(&name, img.clone()));
-    let mats: Vec<Material> = preset
-        .slot_names()
-        .iter()
-        .map(|n| Material { name: (*n).into(), diffuse_texture: tex_id, ..Default::default() })
-        .collect();
+    let mats: Vec<Material> = preset.slot_names().iter().map(|n| Material { name: (*n).into(), diffuse_texture: tex_id, ..Default::default() }).collect();
     let aspect = tex.as_ref().map_or(1.0, |(r, _)| r.width() as f32 / r.height().max(1) as f32);
     let oid = sc.add_object(preset.label(), Geometry::Preset { preset, aspect }, mats);
     let centre = tex.as_ref().map(|(r, _)| canvas.to_world((r.x0 + r.x1) as f32 * 0.5, (r.y0 + r.y1) as f32 * 0.5)).unwrap_or([0.0, 0.0]);
@@ -511,7 +509,10 @@ fn new_depth_map(s: &mut Session, p: &Value, kind: DepthMapKind) -> Result<Value
     let tex = image_of(r.width(), r.height(), &px).map(|i| sc.add_texture(&name, i));
     let aspect = r.width() as f32 / r.height().max(1) as f32;
     let strength = p.get("strength").and_then(Value::as_f64).map_or(0.25, |v| v as f32);
-    let mats = vec![Material { name: "Depth Map Material".into(), diffuse_texture: tex, ..Default::default() }, Material { name: "Back Material".into(), diffuse_texture: tex, ..Default::default() }];
+    let mats = vec![
+        Material { name: "Depth Map Material".into(), diffuse_texture: tex, ..Default::default() },
+        Material { name: "Back Material".into(), diffuse_texture: tex, ..Default::default() },
+    ];
     let oid = sc.add_object(&name, Geometry::DepthMap { map: kind, width: gw, height: gh, heights, strength, aspect }, mats);
     let [cx, cy] = canvas.to_world((r.x0 + r.x1) as f32 * 0.5, (r.y0 + r.y1) as f32 * 0.5);
     if let Some(o) = sc.object_mut(oid) {
@@ -536,7 +537,9 @@ pub fn decode_image(name: &str, bytes: &[u8]) -> Option<Image> {
 }
 
 fn encode_png(img: &Image) -> Option<Vec<u8>> {
-    let raw = photocraft_codecs::Image::from_raw(img.width, img.height, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, img.rgba.clone()).ok()?;
+    let raw =
+        photocraft_codecs::Image::from_raw(img.width, img.height, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, img.rgba.clone())
+            .ok()?;
     photocraft_codecs::encode(&raw, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).ok()
 }
 
@@ -788,7 +791,11 @@ const SET: &str = "3d.set";
 /// `3d.set`: change any scene property (the 3D panel and Properties drive this).
 fn set(s: &mut Session, p: &Value) -> Result<Value> {
     let id = layer_3d(s, p)?;
-    let target = p.get("target").and_then(Value::as_str).ok_or_else(|| bad(SET, "`target` is required: object, material, light, camera, environment or render"))?.to_string();
+    let target = p
+        .get("target")
+        .and_then(Value::as_str)
+        .ok_or_else(|| bad(SET, "`target` is required: object, material, light, camera, environment or render"))?
+        .to_string();
     let values = p.get("values").cloned().filter(Value::is_object).ok_or_else(|| bad(SET, "`values` must be an object"))?;
     let node = p.get("id").and_then(Value::as_u64).map(|v| v as u32);
     let slot = p.get("slot").and_then(Value::as_u64).unwrap_or(0) as usize;
@@ -926,7 +933,11 @@ fn navigate(s: &mut Session, p: &Value) -> Result<Value> {
 fn add_object(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "3d.addObject";
     let id = layer_3d(s, p)?;
-    let preset = p.get("preset").and_then(Value::as_str).and_then(MeshPreset::from_id).ok_or_else(|| bad(CMD, "`preset` is required: cube, sphere, cylinder, cone, donut, ring, hat, pyramid, sodaCan, wineBottle, cubeWrap, plane"))?;
+    let preset = p
+        .get("preset")
+        .and_then(Value::as_str)
+        .and_then(MeshPreset::from_id)
+        .ok_or_else(|| bad(CMD, "`preset` is required: cube, sphere, cylinder, cone, donut, ring, hat, pyramid, sodaCan, wineBottle, cubeWrap, plane"))?;
     edit_scene(s, id, "Add 3D Object", |sc, _| {
         let mats = preset.slot_names().iter().map(|n| Material::named(n)).collect();
         let n = sc.objects.len() + 1;
@@ -1012,9 +1023,14 @@ fn move_to_ground(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn light_preset(s: &mut Session, p: &Value, preset: &'static str) -> Result<Value> {
     let id = layer_3d(s, p)?;
-    edit_scene(s, id, "3D Light Preset", |sc, _| {
-        if scene::apply_light_preset(sc, preset) { Ok(json!({"preset": preset})) } else { Err(other("unknown light preset")) }
-    })
+    edit_scene(
+        s,
+        id,
+        "3D Light Preset",
+        |sc, _| {
+            if scene::apply_light_preset(sc, preset) { Ok(json!({"preset": preset})) } else { Err(other("unknown light preset")) }
+        },
+    )
 }
 
 fn render_style(s: &mut Session, p: &Value, style: Style) -> Result<Value> {
@@ -1070,7 +1086,10 @@ fn set_texture(s: &mut Session, p: &Value) -> Result<Value> {
         Some((name, layer_texture(&doc, lid)?.ok_or_else(|| other("that layer is empty"))?.1))
     } else if let Some(path) = p.get("path").and_then(Value::as_str) {
         let bytes = photocraft_format::read_file(std::path::Path::new(path)).map_err(|e| other(format!("can't read {path}: {e}")))?;
-        Some((path.rsplit(['/', '\\']).next().unwrap_or(path).to_string(), decode_image(path, &bytes).ok_or_else(|| other(format!("{path} isn't an image PhotoCraft reads")))?))
+        Some((
+            path.rsplit(['/', '\\']).next().unwrap_or(path).to_string(),
+            decode_image(path, &bytes).ok_or_else(|| other(format!("{path} isn't an image PhotoCraft reads")))?,
+        ))
     } else {
         None
     };
@@ -1109,7 +1128,8 @@ pub fn set_texture_image(s: &mut Session, id: LayerId, p: &Value, map: &str, ima
 fn material_preset(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "3d.materialPreset";
     let id = layer_3d(s, p)?;
-    let preset = p.get("preset").and_then(Value::as_str).ok_or_else(|| bad(CMD, format!("`preset` is required: {}", scene::MATERIAL_PRESETS.join(", "))))?.to_string();
+    let preset =
+        p.get("preset").and_then(Value::as_str).ok_or_else(|| bad(CMD, format!("`preset` is required: {}", scene::MATERIAL_PRESETS.join(", "))))?.to_string();
     let obj = p.get("id").and_then(Value::as_u64).map(|v| v as u32);
     let slot = p.get("slot").and_then(Value::as_u64).map(|v| v as usize);
     edit_scene(s, id, "3D Material Preset", |sc, _| {
@@ -1183,20 +1203,67 @@ macro_rules! spec {
 
 pub fn specs() -> Vec<CommandSpec> {
     let mut v = vec![
-        spec!("3d.newLayerFromFile", "New 3D Layer from File…", MENU, r#"{"path":str} (OBJ+MTL, STL, glTF, GLB; textures and MTL are read next to the model)"#, has_doc, new_layer_from_file),
+        spec!(
+            "3d.newLayerFromFile",
+            "New 3D Layer from File…",
+            MENU,
+            r#"{"path":str} (OBJ+MTL, STL, glTF, GLB; textures and MTL are read next to the model)"#,
+            has_doc,
+            new_layer_from_file
+        ),
         spec!("3d.mergeLayers", "Merge 3D Layers", MENU, "{} (the selected 3D layers)", two_3d, merge_layers),
         spec!("3d.exportLayer", "Export 3D Layer…", MENU, r#"{"layer":id?,"path":str} (.obj + .mtl + textures, .stl, .gltf or .glb)"#, has_3d, export_layer),
-        spec!("3d.newExtrusionFromLayer", "New 3D Extrusion from Selected Layer", MENU, r#"{"layer":id?} (any layer kind: type, shapes, pixels)"#, has_layer, new_extrusion_from_layer),
+        spec!(
+            "3d.newExtrusionFromLayer",
+            "New 3D Extrusion from Selected Layer",
+            MENU,
+            r#"{"layer":id?} (any layer kind: type, shapes, pixels)"#,
+            has_layer,
+            new_extrusion_from_layer
+        ),
         spec!("3d.newExtrusionFromSelection", "New 3D Extrusion from Selection", MENU, "{}", has_selection, new_extrusion_from_selection),
-        spec!("3d.newExtrusionFromPath", "New 3D Extrusion from Current Path", MENU, "{} (the work path, else the first saved path)", has_path, new_extrusion_from_path),
+        spec!(
+            "3d.newExtrusionFromPath",
+            "New 3D Extrusion from Current Path",
+            MENU,
+            "{} (the work path, else the first saved path)",
+            has_path,
+            new_extrusion_from_path
+        ),
         spec!("3d.newMeshFromLayer.postcard", "Postcard", MENU_MESH, r#"{"layer":id?}"#, has_layer, new_postcard),
-        spec!("3d.newMeshFromLayer.depthMap.plane", "Plane", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(s, p, DepthMapKind::Plane)),
-        spec!("3d.newMeshFromLayer.depthMap.twoSidedPlane", "Two-Sided Plane", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(s, p, DepthMapKind::TwoSidedPlane)),
-        spec!("3d.newMeshFromLayer.depthMap.cylinder", "Cylinder", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(s, p, DepthMapKind::Cylinder)),
-        spec!("3d.newMeshFromLayer.depthMap.sphere", "Sphere", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(s, p, DepthMapKind::Sphere)),
+        spec!("3d.newMeshFromLayer.depthMap.plane", "Plane", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(
+            s,
+            p,
+            DepthMapKind::Plane
+        )),
+        spec!(
+            "3d.newMeshFromLayer.depthMap.twoSidedPlane",
+            "Two-Sided Plane",
+            MENU_DEPTH,
+            r#"{"layer":id?,"strength":num?}"#,
+            has_layer,
+            |s, p| new_depth_map(s, p, DepthMapKind::TwoSidedPlane)
+        ),
+        spec!("3d.newMeshFromLayer.depthMap.cylinder", "Cylinder", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(
+            s,
+            p,
+            DepthMapKind::Cylinder
+        )),
+        spec!("3d.newMeshFromLayer.depthMap.sphere", "Sphere", MENU_DEPTH, r#"{"layer":id?,"strength":num?}"#, has_layer, |s, p| new_depth_map(
+            s,
+            p,
+            DepthMapKind::Sphere
+        )),
         spec!("3d.splitExtrusion", "Split Extrusion", MENU, r#"{"layer":id?,"object":id?}"#, has_3d, split_extrusion),
         spec!("3d.moveObjectToGroundPlane", "Move Object to Ground Plane", MENU, r#"{"layer":id?,"id":id? (default: every object)}"#, has_3d, move_to_ground),
-        spec!("3d.crossSection", "Apply Cross Section to Scene", MENU, r#"{"layer":id?} (toggles; set axis/offset with 3d.set target render)"#, has_3d, cross_section),
+        spec!(
+            "3d.crossSection",
+            "Apply Cross Section to Scene",
+            MENU,
+            r#"{"layer":id?} (toggles; set axis/offset with 3d.set target render)"#,
+            has_3d,
+            cross_section
+        ),
         spec!("3d.toggleGroundShadows", "Ground Plane Shadows", MENU, r#"{"layer":id?}"#, has_3d, toggle_ground),
         CommandSpec {
             id: "3d.render",
@@ -1218,12 +1285,33 @@ pub fn specs() -> Vec<CommandSpec> {
             has_3d,
             set
         ),
-        spec!("3d.navigate", "3D Navigate", &[], r#"{"layer":id?,"mode":"orbit"|"roll"|"pan"|"slide"|"scale","dx":num,"dy":num,"object":id? (else the camera)}"#, has_3d, navigate),
+        spec!(
+            "3d.navigate",
+            "3D Navigate",
+            &[],
+            r#"{"layer":id?,"mode":"orbit"|"roll"|"pan"|"slide"|"scale","dx":num,"dy":num,"object":id? (else the camera)}"#,
+            has_3d,
+            navigate
+        ),
         spec!("3d.addObject", "Add 3D Object", &[], r#"{"layer":id?,"preset":str}"#, has_3d, add_object),
         spec!("3d.deleteNode", "Delete 3D Object or Light", &[], r#"{"layer":id?,"id":id}"#, has_3d, delete_node),
         spec!("3d.duplicateObject", "Duplicate 3D Object", MENU, r#"{"layer":id?,"id":id?}"#, has_3d, duplicate_object),
-        spec!("3d.setTexture", "Set 3D Texture", &[], r#"{"layer":id?,"id":id? (object),"slot":int?,"map":"diffuse"|"bump"|"opacity"|"normal"|"environment","fromLayer":id?|"path":str? (neither: remove)}"#, has_3d, set_texture),
-        spec!("3d.materialPreset", "3D Material Preset", &[], r#"{"layer":id?,"id":id?,"slot":int? (default every slot),"preset":str}"#, has_3d, material_preset),
+        spec!(
+            "3d.setTexture",
+            "Set 3D Texture",
+            &[],
+            r#"{"layer":id?,"id":id? (object),"slot":int?,"map":"diffuse"|"bump"|"opacity"|"normal"|"environment","fromLayer":id?|"path":str? (neither: remove)}"#,
+            has_3d,
+            set_texture
+        ),
+        spec!(
+            "3d.materialPreset",
+            "3D Material Preset",
+            &[],
+            r#"{"layer":id?,"id":id?,"slot":int? (default every slot),"preset":str}"#,
+            has_3d,
+            material_preset
+        ),
         spec!("3d.saveView", "Save 3D View", &[], r#"{"layer":id?,"name":str}"#, has_3d, save_view),
         spec!("3d.restoreView", "Restore 3D View", &[], r#"{"layer":id?,"name":str}"#, has_3d, restore_view),
         spec!("3d.inspect", "Inspect 3D Scene", &[], r#"{"layer":id?} → {"summary","scene"}"#, has_3d, inspect),

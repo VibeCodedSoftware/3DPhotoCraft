@@ -82,9 +82,9 @@ pub fn import(name: &str, bytes: &[u8], resolve: &dyn Fn(&str) -> Option<Vec<u8>
         "obj" => import_obj(bytes, resolve),
         "stl" => import_stl(bytes),
         "gltf" | "glb" => import_gltf(bytes, resolve),
-        "dae" | "3ds" | "u3d" | "kmz" | "fbx" | "idtf" => Err(Error::Unsupported(format!(
-            ".{ext} files aren't supported. Export the model as OBJ, STL, glTF or GLB from your 3D application and open that."
-        ))),
+        "dae" | "3ds" | "u3d" | "kmz" | "fbx" | "idtf" => {
+            Err(Error::Unsupported(format!(".{ext} files aren't supported. Export the model as OBJ, STL, glTF or GLB from your 3D application and open that.")))
+        }
         _ => Err(Error::Unsupported(format!("\"{name}\" isn't a 3D file PhotoCraft reads (OBJ, STL, glTF, GLB)."))),
     }?;
     for o in &mut out.objects {
@@ -226,7 +226,9 @@ fn import_obj(bytes: &[u8], resolve: &dyn Fn(&str) -> Option<Vec<u8>>) -> Result
 fn parse_mtl(text: &str) -> HashMap<String, ImportedMaterial> {
     let mut out = HashMap::new();
     let mut cur: Option<(String, ImportedMaterial)> = None;
-    let col = |it: &mut std::str::SplitWhitespace<'_>| -> [f32; 3] { [parse_f(it.next()).clamp(0.0, 1.0), parse_f(it.next()).clamp(0.0, 1.0), parse_f(it.next()).clamp(0.0, 1.0)] };
+    let col = |it: &mut std::str::SplitWhitespace<'_>| -> [f32; 3] {
+        [parse_f(it.next()).clamp(0.0, 1.0), parse_f(it.next()).clamp(0.0, 1.0), parse_f(it.next()).clamp(0.0, 1.0)]
+    };
     // Texture statements end with the file name after any options.
     let file = |it: std::str::SplitWhitespace<'_>| -> Option<ImageRef> { it.last().map(|s| ImageRef::Path(s.replace('\\', "/"))) };
     for line in text.lines() {
@@ -302,7 +304,10 @@ fn import_stl(bytes: &[u8]) -> Result<Imported, Error> {
     }
     // STL is usually Z-up: stand it up in our Y-up world.
     mesh.transform(&Mat4::rot_x(-90.0));
-    Ok(Imported { objects: vec![ImportedObject { name: "STL Mesh".into(), mesh, materials: vec![ImportedMaterial::plain(Material::default())] }], warnings: Vec::new() })
+    Ok(Imported {
+        objects: vec![ImportedObject { name: "STL Mesh".into(), mesh, materials: vec![ImportedMaterial::plain(Material::default())] }],
+        warnings: Vec::new(),
+    })
 }
 
 fn add_flat(m: &mut Mesh, p: [Vec3; 3]) {
@@ -464,10 +469,15 @@ fn import_gltf(bytes: &[u8], resolve: &dyn Fn(&str) -> Option<Vec<u8>>) -> Resul
         .map(|(i, m)| {
             let pbr = m.get("pbrMetallicRoughness");
             let f = |k: &str, d: f64| pbr.and_then(|p| p.get(k)).and_then(Value::as_f64).unwrap_or(d) as f32;
-            let base: Vec<f32> = pbr.and_then(|p| p.get("baseColorFactor")).and_then(Value::as_array).map(|a| a.iter().map(|v| v.as_f64().unwrap_or(1.0) as f32).collect()).unwrap_or_else(|| vec![1.0; 4]);
+            let base: Vec<f32> = pbr
+                .and_then(|p| p.get("baseColorFactor"))
+                .and_then(Value::as_array)
+                .map(|a| a.iter().map(|v| v.as_f64().unwrap_or(1.0) as f32).collect())
+                .unwrap_or_else(|| vec![1.0; 4]);
             let g = |k: usize| base.get(k).copied().unwrap_or(1.0).clamp(0.0, 1.0);
             let (metal, rough) = (f("metallicFactor", 1.0).clamp(0.0, 1.0), f("roughnessFactor", 1.0).clamp(0.0, 1.0));
-            let em: Vec<f32> = m.get("emissiveFactor").and_then(Value::as_array).map(|a| a.iter().map(|v| v.as_f64().unwrap_or(0.0) as f32).collect()).unwrap_or_default();
+            let em: Vec<f32> =
+                m.get("emissiveFactor").and_then(Value::as_array).map(|a| a.iter().map(|v| v.as_f64().unwrap_or(0.0) as f32).collect()).unwrap_or_default();
             let diffuse = [linear_to_srgb(g(0)), linear_to_srgb(g(1)), linear_to_srgb(g(2))];
             let spec = 0.25 + (diffuse.iter().sum::<f32>() / 3.0 - 0.25) * metal;
             let blend = m.get("alphaMode").and_then(Value::as_str) == Some("BLEND");
@@ -483,7 +493,13 @@ fn import_gltf(bytes: &[u8], resolve: &dyn Fn(&str) -> Option<Vec<u8>>) -> Resul
                 double_sided: m.get("doubleSided").and_then(Value::as_bool).unwrap_or(false),
                 ..Default::default()
             };
-            ImportedMaterial { material, diffuse: image_ref(pbr.and_then(|p| p.get("baseColorTexture"))), bump: None, normal: image_ref(m.get("normalTexture")), opacity: None }
+            ImportedMaterial {
+                material,
+                diffuse: image_ref(pbr.and_then(|p| p.get("baseColorTexture"))),
+                bump: None,
+                normal: image_ref(m.get("normalTexture")),
+                opacity: None,
+            }
         })
         .collect();
     // Node hierarchy.
@@ -547,7 +563,7 @@ fn import_gltf(bytes: &[u8], resolve: &dyn Fn(&str) -> Option<Vec<u8>>) -> Resul
                 Some(ai) => read_u32(ai as usize).unwrap_or_default(),
                 None => (0..n as u32).collect(),
             };
-            for t in idx.chunks_exact(3) {
+            for t in idx.as_chunks::<3>().0 {
                 mesh.tri(base + t[0], base + t[1], base + t[2], slot);
             }
             total += idx.len() / 3;
@@ -749,7 +765,7 @@ fn gltf_parts(scene: &Scene, png: &dyn Fn(&Image) -> Option<Vec<u8>>) -> (Value,
     let mut textures = Vec::new();
     let mut tex_index: HashMap<u32, usize> = HashMap::new();
     let pad = |bin: &mut Vec<u8>| {
-        while bin.len() % 4 != 0 {
+        while !bin.len().is_multiple_of(4) {
             bin.push(0);
         }
     };
@@ -800,7 +816,8 @@ fn gltf_parts(scene: &Scene, png: &dyn Fn(&Image) -> Option<Vec<u8>>) -> (Value,
                 b.add(p);
             }
             let vp = push_view(&mut bin, &fbytes(&pv), Some(34962));
-            accessors.push(json!({"bufferView": vp, "componentType": 5126, "count": pos.len(), "type": "VEC3", "min": b.min.to_array(), "max": b.max.to_array()}));
+            accessors
+                .push(json!({"bufferView": vp, "componentType": 5126, "count": pos.len(), "type": "VEC3", "min": b.min.to_array(), "max": b.max.to_array()}));
             let ap = accessors.len() - 1;
             let vn = push_view(&mut bin, &fbytes(&nv), Some(34962));
             accessors.push(json!({"bufferView": vn, "componentType": 5126, "count": nrm.len(), "type": "VEC3"}));
@@ -853,9 +870,7 @@ fn gltf_parts(scene: &Scene, png: &dyn Fn(&Image) -> Option<Vec<u8>>) -> (Value,
         let mtx = t.matrix();
         let mut col = Vec::with_capacity(16);
         for c in 0..4 {
-            for r in 0..4 {
-                col.push(mtx.m[r][c]);
-            }
+            col.extend(mtx.m.iter().map(|row| row[c]));
         }
         nodes.push(json!({"name": o.name, "mesh": meshes.len() - 1, "matrix": col}));
     }

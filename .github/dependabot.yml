@@ -3,15 +3,24 @@ updates:
   # Maintain Rust / Cargo dependencies
   - package-ecosystem: "cargo"
     directory: "/"
+    # Weekly, not daily: a daily group PR re-opened every morning (and its CI runs) was mostly noise.
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
       time: "06:00"
       timezone: "America/New_York"
-    # Consolidate updates into a single PR rather than one PR per crate
+    # One PR for the patch-level updates, which are drop-in. Minor and major bumps (for 0.x crates a
+    # minor bump is a breaking one: jpeg-encoder 0.6 -> 0.7 removed `Density`) are left for a
+    # deliberate upgrade instead of being mixed into a group PR that can't build.
     groups:
-      cargo-dependencies:
-        patterns:
-          - "*"
+      cargo-patch:
+        update-types:
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
     commit-message:
       prefix: "chore(deps)"
 
@@ -19,7 +28,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
       time: "06:00"
       timezone: "America/New_York"
     groups:

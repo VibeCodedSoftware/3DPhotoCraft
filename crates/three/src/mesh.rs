@@ -276,7 +276,9 @@ impl MeshPreset {
     pub fn slot_names(self) -> &'static [&'static str] {
         match self {
             MeshPreset::Cylinder | MeshPreset::SodaCan => &["Top Material", "Label Material", "Bottom Material"],
-            MeshPreset::Cube | MeshPreset::CubeWrap => &["Front Material", "Right Material", "Back Material", "Left Material", "Top Material", "Bottom Material"],
+            MeshPreset::Cube | MeshPreset::CubeWrap => {
+                &["Front Material", "Right Material", "Back Material", "Left Material", "Top Material", "Bottom Material"]
+            }
             MeshPreset::WineBottle => &["Label Material", "Glass Material", "Cork Material"],
             MeshPreset::TwoSidedPlane => &["Front Material", "Back Material"],
             _ => &["Default Material"],
@@ -504,7 +506,19 @@ fn soda_can() -> Mesh {
 }
 
 fn wine_bottle() -> Mesh {
-    let profile = [(0.0, 0.62), (0.055, 0.62), (0.055, 0.5), (0.06, 0.45), (0.065, 0.3), (0.12, 0.12), (0.17, 0.02), (0.18, -0.08), (0.18, -0.5), (0.17, -0.52), (0.0, -0.52)];
+    let profile = [
+        (0.0, 0.62),
+        (0.055, 0.62),
+        (0.055, 0.5),
+        (0.06, 0.45),
+        (0.065, 0.3),
+        (0.12, 0.12),
+        (0.17, 0.02),
+        (0.18, -0.08),
+        (0.18, -0.5),
+        (0.17, -0.52),
+        (0.0, -0.52),
+    ];
     let mut m = lathe(&profile, 48, 1, 35.0);
     let tris = m.indices.clone();
     for (t, tri) in tris.iter().enumerate() {

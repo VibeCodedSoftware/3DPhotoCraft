@@ -185,7 +185,14 @@ pub fn sample_material(scene: &Scene, s: &Surface<'_>) -> Sampled {
         let (tt, bb) = (t.normalize(), b.normalize());
         n = (n - tt * (hu * k) - bb * (hv * k)).normalize_or(n);
     }
-    Sampled { base, alpha: alpha.clamp(0.0, 1.0), normal: n, specular: lin3(m.specular), emission: v3(m.illumination[0], m.illumination[1], m.illumination[2]), ambient: lin3(m.ambient) }
+    Sampled {
+        base,
+        alpha: alpha.clamp(0.0, 1.0),
+        normal: n,
+        specular: lin3(m.specular),
+        emission: v3(m.illumination[0], m.illumination[1], m.illumination[2]),
+        ambient: lin3(m.ambient),
+    }
 }
 
 /// Light arriving at `pos` from `l`: (direction towards the light, radiance, distance).
@@ -249,7 +256,13 @@ pub fn exponent(shine: f32) -> f32 {
 /// Shade a surface point lit by the scene's lights. `visibility(light index, dir to light,
 /// distance)` returns 0–1 (shadowing). `reflected` supplies what a mirror reflection sees (the
 /// rasterizer passes the environment, the ray tracer traces). Returns linear RGB and alpha.
-pub fn shade(scene: &Scene, s: &Surface<'_>, view: Vec3, visibility: &dyn Fn(usize, Vec3, f32) -> f32, reflected: &dyn Fn(Vec3, f32) -> Vec3) -> (Vec3, f32, Sampled) {
+pub fn shade(
+    scene: &Scene,
+    s: &Surface<'_>,
+    view: Vec3,
+    visibility: &dyn Fn(usize, Vec3, f32) -> f32,
+    reflected: &dyn Fn(Vec3, f32) -> Vec3,
+) -> (Vec3, f32, Sampled) {
     let sm = sample_material(scene, s);
     let n = sm.normal;
     let mut c = sm.emission;
@@ -333,7 +346,8 @@ impl Projector {
     /// View-space point → (screen x, screen y, depth = −z).
     pub fn project_view(&self, p: Vec3) -> (f32, f32, f32) {
         let d = -p.z;
-        let (nx, ny) = if self.ortho { (p.x / (self.half * self.aspect), p.y / self.half) } else { (p.x / (d * self.half * self.aspect), p.y / (d * self.half)) };
+        let (nx, ny) =
+            if self.ortho { (p.x / (self.half * self.aspect), p.y / self.half) } else { (p.x / (d * self.half * self.aspect), p.y / (d * self.half)) };
         ((nx + 1.0) * 0.5 * self.w, (1.0 - ny) * 0.5 * self.h, d)
     }
     /// Camera ray through screen point `(x, y)`: (origin, direction), world space.
@@ -601,7 +615,15 @@ fn rasterize(stris: &[STri], w: usize, h: usize, ortho: bool) -> Vec<Option<Frag
     frags
 }
 
-fn shade_all(prep: &Prepared<'_>, proj: &Projector, stris: &[STri], frags: &[Option<Frag>], shadows: &[Option<ShadowMap>], w: usize, h: usize) -> Vec<[f32; 4]> {
+fn shade_all(
+    prep: &Prepared<'_>,
+    proj: &Projector,
+    stris: &[STri],
+    frags: &[Option<Frag>],
+    shadows: &[Option<ShadowMap>],
+    w: usize,
+    h: usize,
+) -> Vec<[f32; 4]> {
     let scene = prep.scene;
     let style = scene.render.style;
     let exposure = scene.render.exposure;
@@ -801,7 +823,7 @@ fn draw_wire(out: &mut [[f32; 4]], stris: &[STri], frags: &[Option<Frag>], w: us
                 let d = seg_dist2(x, y, a.0, a.1, b.0, b.1);
                 best = best.min(d);
             }
-            (best < 1.0).then(|| (i, 1.0 - best))
+            (best < 1.0).then_some((i, 1.0 - best))
         })
         .collect();
     for (i, cov) in lines {
@@ -861,7 +883,8 @@ fn draw_points(out: &mut [[f32; 4]], prep: &Prepared<'_>, proj: &Projector, frag
             }
             let Some((x, y, d)) = proj.world_to_screen(p) else { continue };
             let (xi, yi) = (x.floor() as i64, y.floor() as i64);
-            let front = xi >= 0 && yi >= 0 && (xi as usize) < w && (yi as usize) < h && frags[yi as usize * w + xi as usize].is_none_or(|f| d <= f.depth * 1.01 + 1e-3);
+            let front =
+                xi >= 0 && yi >= 0 && (xi as usize) < w && (yi as usize) < h && frags[yi as usize * w + xi as usize].is_none_or(|f| d <= f.depth * 1.01 + 1e-3);
             if front {
                 for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
                     put(out, w, h, xi + dx, yi + dy, line, 1.0);

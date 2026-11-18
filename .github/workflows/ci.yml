@@ -221,7 +221,7 @@ jobs:
         if: matrix.part == 'integration'
         run: cargo xtask layers
 
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21 # v2.90.4
         with:
           tool: cargo-nextest@0.9.150
 
@@ -278,7 +278,7 @@ jobs:
           shared-key: ${{ hashFiles('Cargo.toml') }}-gate
           save-if: false
 
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21 # v2.90.4
         with:
           tool: cargo-nextest@0.9.150
 
